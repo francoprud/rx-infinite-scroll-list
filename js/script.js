@@ -1,41 +1,30 @@
-var getPosition = (actual, movement) => {
+var getPosition = function(actual, movement) {
   var ans = actual + movement;
   var length = list.length;
-
-  while (ans >= length || ans < 0) {
-    if (ans >= length) {
-      ans %= length;
-    } else {
-      ans += length;
-    }
-  }
-  return ans;
+  return ans < 0 ? ans + length : ans % length;
 };
 
-var getMovement = (movement) => {
-  if (movement > 0) {
-    return 1;
-  } else if (movement < 0) {
-    return -1;
-  } else {
-    return 0;
-  }
+var getMovement = function(movement) {
+  return movement != 0 ? Math.abs(movement) / movement : movement;
 };
 
-var focusElement = (position) => {
+var focusElement = function(movement) {
+  actualPosition = getPosition(actualPosition, movement);
   $('#main').empty();
-  $('#main').append(list[position].cloneNode(true));
+  $('#main').append(list[actualPosition].cloneNode(true));
 };
 
 var list = $.find('img');
 var actualPosition = 0;
-var mousemove = Rx.Observable.fromEvent(document, 'mousemove')
-                  .map((event) => { return getMovement(event.movementX) })
-                  .map((movement) => { return getPosition(actualPosition, movement)});
-
-var subscription = mousemove.throttle(500).subscribe((position) => {
-  actualPosition = position;
-  focusElement(actualPosition);
-});
 
 focusElement(actualPosition);
+
+var mousemove = Rx.Observable.fromEvent(document, 'mousedown')
+  .map(function(mouseDown) {
+    return Rx.Observable.fromEvent(document, 'mousemove')
+      .map(function(mouseMove) {
+        return getMovement(mouseMove.movementX);
+      }).takeUntil(Rx.Observable.fromEvent(document, 'mouseup'));
+  }).concatAll().throttle(300);
+
+mousemove.forEach(focusElement);
